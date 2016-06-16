@@ -10,6 +10,19 @@ var mime = require('mime');
 var bodyParser = require('body-parser');
 var socketio = require('socket.io');
 
+
+//Setting up pg
+
+var pg = require('pg');
+
+var conString = 'postgres://localhost:5432/twitterdb';
+
+app.use(bodyParser.urlencoded({ extended: true }));
+
+var client = new pg.Client(conString);
+
+client.connect();
+
 // templating boilerplate setup
 app.engine('html', swig.renderFile); // how to render html templates
 app.set('view engine', 'html'); // what file extension do our templates have
@@ -20,7 +33,7 @@ swig.setDefaults({ cache: false });
 app.use(morgan('dev'));
 
 // body parsing middleware
-app.use(bodyParser.urlencoded({ extended: true })); // for HTML form submits
+//app.use(bodyParser.urlencoded({ extended: true })); // for HTML form submits
 app.use(bodyParser.json()); // would be for AJAX requests
 
 
@@ -33,7 +46,7 @@ var io = socketio.listen(server);
 app.use(express.static(path.join(__dirname, '/public')));
 
 // modular routing that uses io inside it
-app.use('/', makesRouter(io));
+app.use('/', makesRouter(io, client));
 
 // // manually-written static file middleware
 // app.use(function(req, res, next){
