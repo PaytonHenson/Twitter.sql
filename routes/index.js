@@ -81,34 +81,52 @@ module.exports = function makeRouterWithSockets (io, client) {
 
   // create a new tweet
   router.post('/tweets', function(req, res, next){
+
+    if(err) return next(err);
+
+    req.body.name = req.body.name.trim();
     //var newTweet = tweetBank.add(req.body.name, req.body.content);
     client.query('SELECT users.id FROM users WHERE users.name = $1', [req.body.name], function(err, data) {
-
+      console.log('name', req.body.name);
+      console.log(data.rows[0]);
       if(err) return next(err);
-      if(data.rows=[]){
-        //console.log(data.rows);
-        client.query('INSERT INTO users (name) VALUES ($1)', [req.body.name], function(err, content){
+
+      else if(data.rows[0] === undefined){
+
+        console.log('rows',data.rows);
+        client.query('INSERT INTO users (name) VALUES ($1) RETURNING id', [req.body.name], function(err, content){
+
             if(err) return next(err);
-            client.query('SELECT users.id FROM users WHERE users.name = $1', [req.body.name], function(err, data) {
 
-      if(err) return next(err);
-      client.query('INSERT INTO tweets (userId, content) VALUES ($1, $2)', [data.rows[0].id, req.body.content], function(err, data) {
+            client.query('INSERT INTO tweets (userId, content) VALUES ($1, $2)', [content.rows[0].id, req.body.content], function(err, data) {
+
+              if(err) return next(err);
+
+              io.sockets.emit('new_tweet', {name: req.body.name, content: req.body.content});
+
+              res.redirect('/');
+            });
+        });
+
+      // client.query('INSERT INTO tweets (userId, content, id) VALUES ($1, $2, DEFAULT)', [data.rows[0].id, req.body.content], function(err, data) {
+
+      //     io.sockets.emit('new_tweet', {name: req.body.name, content: req.body.content});
+
+      //     res.redirect('/');
+      // });
+      }
+
+      else {
+        client.query('INSERT INTO tweets (userId, content) VALUES ($1, $2)', [data.rows[0].id, req.body.content], function(err, data) {
+
+          if (err) return next(err);
 
           io.sockets.emit('new_tweet', {name: req.body.name, content: req.body.content});
 
           res.redirect('/');
-          });
-            });
+        });
       }
-
-      else{client.query('INSERT INTO tweets (userId, content) VALUES ($1, $2)', [data.rows[0].id, req.body.content], function(err, data) {
-
-      io.sockets.emit('new_tweet', {name: req.body.name, content: req.body.content});
-
-      res.redirect('/');
-      });}
-    });
-  });
+  });});
 
   // // replaced this hard-coded route with general static routing in app.js
   // router.get('/stylesheets/style.css', function(req, res, next){
